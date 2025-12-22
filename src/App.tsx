@@ -202,30 +202,45 @@ const App: React.FC = () => {
     if (!startTime || !endTime) return;
 
     let correctLetters = 0;
-    let totalTypedLetters = 0;
-    let mistakes = 0;
+    let incorrectLetters = 0;
+    let extraLetters = 0;
+    let missedLetters = 0;
 
-    const relevantWords = words.slice(0, currentWordIndex + 1);
+    // Each currentWordIndex represents a space typed (or the final word completed)
+    const spaces = currentWordIndex;
 
-    relevantWords.forEach((word: WordState) => {
-      word.letters.forEach((letter: LetterState) => {
-        if (letter.status === 'correct') {
-          correctLetters++;
-        } else if (letter.status === 'incorrect' || letter.status === 'extra') {
-          mistakes++;
-        }
-
-        if (letter.status !== 'none') {
-          totalTypedLetters++;
-        }
-      });
+    words.forEach((word, wIdx) => {
+      if (wIdx <= currentWordIndex) {
+        word.letters.forEach((letter) => {
+          if (letter.status === 'correct') {
+            correctLetters++;
+          } else if (letter.status === 'incorrect') {
+            incorrectLetters++;
+          } else if (letter.status === 'extra') {
+            extraLetters++;
+          } else if (letter.status === 'none' && wIdx < currentWordIndex) {
+            // Count untyped letters in words that were skipped/passed
+            missedLetters++;
+          }
+        });
+      }
     });
 
     const durationInMinutes = (testMode === 'time' ? testConfig : (endTime - startTime) / 1000) / 60;
 
-    const calculatedWpm = Math.round((correctLetters / 5) / durationInMinutes);
-    const calculatedRawWpm = Math.round(((correctLetters + mistakes) / 5) / durationInMinutes);
-    const calculatedAccuracy = totalTypedLetters > 0 ? Math.round((correctLetters / totalTypedLetters) * 100) : 0;
+    // Standard WPM: (Correct Chars + Spaces) / 5 / minutes
+    const calculatedWpm = Math.round(((correctLetters + spaces) / 5) / durationInMinutes);
+
+    // Raw WPM: (All typed chars + extra + spaces) / 5 / minutes
+    const totalTypedIncludingErrors = correctLetters + incorrectLetters + extraLetters + spaces;
+    const calculatedRawWpm = Math.round((totalTypedIncludingErrors / 5) / durationInMinutes);
+
+    // Realistic Accuracy: Correct / (Correct + Incorrect + Extra + Missed)
+    // Spaces are assumed correct as they are required to move to the next word
+    const totalPossible = correctLetters + incorrectLetters + extraLetters + missedLetters + spaces;
+    const calculatedAccuracy = totalPossible > 0
+      ? Math.round(((correctLetters + spaces) / totalPossible) * 100)
+      : 0;
 
     setWpm(calculatedWpm);
     setRawWpm(calculatedRawWpm);
