@@ -565,8 +565,8 @@ footer {
 
 @media (max-width: 600px) {
   header {
-    padding: 1.5rem 1.5rem;
-    /* Balanced side padding */
+    padding: 1.5rem 2rem;
+    /* Consistent side padding */
     display: grid;
     grid-template-areas:
       "leaderboard logo"
@@ -576,7 +576,7 @@ footer {
     gap: 1rem;
     align-items: center;
     direction: ltr;
-    /* Layout control */
+    /* Force left/right placement */
     width: 100%;
   }
 
@@ -584,13 +584,16 @@ footer {
     grid-area: logo;
     display: flex;
     justify-content: flex-end;
-    /* In LTR layout (the header), this pushes to right */
+    /* Align exactly to the right padding */
     align-items: center;
-    font-size: 1.35rem;
+    font-size: 1.3rem;
     gap: 8px;
     direction: rtl;
     /* Keep text flow Dhivehi */
     cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    /* Remove any accidental padding */
   }
 
   .header-actions {
@@ -601,14 +604,18 @@ footer {
     grid-area: leaderboard;
     display: flex;
     justify-content: flex-start;
+    /* Align exactly to the left padding */
     padding: 0;
-    font-size: 1.4rem;
+    /* Match logo's internal padding */
+    font-size: 1.5rem;
+    line-height: 1;
+    background: none;
   }
 
   .settings-bar {
     grid-area: settings;
     width: 100%;
-    margin-top: 0.5rem;
+    margin-top: 1rem;
     justify-content: center;
     overflow-x: auto;
     white-space: nowrap;
@@ -619,7 +626,8 @@ footer {
   }
 
   main {
-    padding: 0 1.5rem;
+    padding: 0 2rem;
+    /* Sync main padding with header */
   }
 
   .words-wrapper {
