@@ -75,6 +75,7 @@ const App: React.FC = () => {
   }, []);
 
   const fetchLeaderboard = useCallback(async () => {
+    setLeaderboard([]); // Clear stale data before loading new category
     setIsLoadingLeaderboard(true);
     try {
       const { data, error } = await supabase
@@ -446,7 +447,7 @@ const App: React.FC = () => {
                 </button>
                 <button
                   className={`mode-btn ${testMode === 'words' ? 'active' : ''}`}
-                  onClick={() => { setTestMode('words'); setTestConfig(25); }}
+                  onClick={() => { setTestMode('words'); setTestConfig(10); }}
                 >
                   ބަސްތައް
                 </button>
