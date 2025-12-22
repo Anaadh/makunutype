@@ -565,26 +565,36 @@ footer {
 
 @media (max-width: 600px) {
   header {
-    padding: 1.5rem 2.5rem;
-    /* Increased side padding */
+    padding: 1.5rem 1.5rem;
+    /* Balanced side padding */
     display: grid;
     grid-template-areas:
       "leaderboard logo"
       "settings settings";
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 1fr 1fr;
+    /* Equal split for alignment stability */
     gap: 1rem;
     align-items: center;
     direction: ltr;
-    /* Fix layout direction to stop swapping */
+    /* Layout control */
+    width: 100%;
   }
 
   .logo {
     grid-area: logo;
     display: flex;
     justify-content: flex-end;
-    font-size: 1.4rem;
+    /* In LTR layout (the header), this pushes to right */
+    align-items: center;
+    font-size: 1.35rem;
+    gap: 8px;
     direction: rtl;
-    /* Keep text itself RTL */
+    /* Keep text flow Dhivehi */
+    cursor: pointer;
+  }
+
+  .header-actions {
+    display: contents;
   }
 
   .leaderboard-btn {
@@ -592,27 +602,24 @@ footer {
     display: flex;
     justify-content: flex-start;
     padding: 0;
-  }
-
-  .header-actions {
-    display: contents;
-    /* Allows children to be placed in grid areas */
+    font-size: 1.4rem;
   }
 
   .settings-bar {
     grid-area: settings;
     width: 100%;
-    margin-top: 1rem;
+    margin-top: 0.5rem;
     justify-content: center;
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
     padding: 0.5rem 1rem;
+    background: var(--sub-alt-color);
+    border-radius: 8px;
   }
 
   main {
-    padding: 0 8%;
-    /* Increased side padding for main content */
+    padding: 0 1.5rem;
   }
 
   .words-wrapper {
