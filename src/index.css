@@ -565,7 +565,8 @@ footer {
 
 @media (max-width: 600px) {
   header {
-    padding: 1rem;
+    padding: 1.5rem 2.5rem;
+    /* Increased side padding */
     display: grid;
     grid-template-areas:
       "leaderboard logo"
@@ -573,16 +574,23 @@ footer {
     grid-template-columns: auto 1fr;
     gap: 1rem;
     align-items: center;
+    direction: ltr;
+    /* Fix layout direction to stop swapping */
   }
 
   .logo {
     grid-area: logo;
+    display: flex;
     justify-content: flex-end;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
+    direction: rtl;
+    /* Keep text itself RTL */
   }
 
   .leaderboard-btn {
     grid-area: leaderboard;
+    display: flex;
+    justify-content: flex-start;
     padding: 0;
   }
 
@@ -594,16 +602,17 @@ footer {
   .settings-bar {
     grid-area: settings;
     width: 100%;
-    margin-top: 0.5rem;
+    margin-top: 1rem;
     justify-content: center;
     overflow-x: auto;
     white-space: nowrap;
     -webkit-overflow-scrolling: touch;
-    padding: 0.4rem 0.8rem;
+    padding: 0.5rem 1rem;
   }
 
   main {
-    padding: 0 5%;
+    padding: 0 8%;
+    /* Increased side padding for main content */
   }
 
   .words-wrapper {
