@@ -86,10 +86,7 @@ const App: React.FC = () => {
         .order('wpm', { ascending: false })
         .limit(10);
 
-      if (error) {
-        console.error('Leaderboard Fetch Error:', error.message, error.details);
-        throw error;
-      }
+      if (error) throw error;
       if (data) {
         setLeaderboard(data);
       }
@@ -140,26 +137,6 @@ const App: React.FC = () => {
     }
   }, [currentView, testMode, testConfig, fetchLeaderboard]);
 
-  // Connection Test
-  useEffect(() => {
-    const testDB = async () => {
-      console.log('--- Database Connection Test ---');
-      try {
-        const { error } = await supabase.from('leaderboard').select('count', { count: 'exact', head: true });
-        if (error) {
-          console.error('DB Test Result: ERROR', error.message);
-          console.error('Possible cause: Table "leaderboard" might not exist or RLS is blocking SELECT.');
-        } else {
-          console.log('DB Test Result: SUCCESS! Connected to "leaderboard" table.');
-        }
-      } catch (e) {
-        console.error('DB Test Result: CRITICAL FAILURE', e);
-      }
-      console.log('-------------------------------');
-    };
-    testDB();
-  }, []);
-
   const handleSaveScore = async () => {
     if (!playerName.trim() || hasSaved) return;
 
@@ -177,12 +154,7 @@ const App: React.FC = () => {
         .from('leaderboard')
         .insert([newEntry]);
 
-      if (error) {
-        console.error('Score Save Error:', error.message, error.details);
-        throw error;
-      }
-
-      console.log('Score saved successfully!');
+      if (error) throw error;
 
       setHasSaved(true);
       localStorage.setItem('makunu_player_name', playerName.trim());

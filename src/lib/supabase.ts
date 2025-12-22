@@ -6,12 +6,6 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 // Create a dummy client or handle invalid configuration gracefully
 const isConfigured = supabaseUrl && supabaseUrl !== 'YOUR_SUPABASE_URL' && supabaseAnonKey && supabaseAnonKey !== 'YOUR_SUPABASE_ANON_KEY';
 
-console.log('Supabase Connection check:', {
-    urlExists: !!supabaseUrl,
-    keyExists: !!supabaseAnonKey,
-    isConfigured
-});
-
 export const supabase = isConfigured
     ? createClient(supabaseUrl, supabaseAnonKey)
     : {
