@@ -8,6 +8,7 @@ const WORD_MODES = [10, 25, 50, 100];
 const TIME_MODES = [15, 30, 60, 120];
 
 type TestMode = 'time' | 'words';
+type AppView = 'typing' | 'leaderboard';
 
 interface LetterState {
   char: string;
@@ -31,6 +32,9 @@ interface LeaderboardEntry {
 }
 
 const App: React.FC = () => {
+  // Navigation
+  const [currentView, setCurrentView] = useState<AppView>('typing');
+
   // Config state
   const [testMode, setTestMode] = useState<TestMode>('words');
   const [testConfig, setTestConfig] = useState<number>(25);
@@ -82,7 +86,9 @@ const App: React.FC = () => {
         .limit(10);
 
       if (error) throw error;
-      if (data) setLeaderboard(data);
+      if (data) {
+        setLeaderboard(data);
+      }
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       const saved = localStorage.getItem(`makunu_leaderboard_v3_${testMode}_${testConfig}`);
@@ -117,8 +123,12 @@ const App: React.FC = () => {
   }, [testMode, testConfig, getNewWords, fetchLeaderboard]);
 
   useEffect(() => {
-    resetTest();
-  }, [resetTest]);
+    if (currentView === 'typing') {
+      if (!startTime && !isFinished) resetTest();
+    } else {
+      fetchLeaderboard();
+    }
+  }, [currentView, testMode, testConfig, fetchLeaderboard]);
 
   const handleSaveScore = async () => {
     if (!playerName.trim() || hasSaved) return;
@@ -245,10 +255,12 @@ const App: React.FC = () => {
   }, [currentLetterIndex, currentWordIndex]);
 
   useEffect(() => {
-    updateCaretPosition();
-    window.addEventListener('resize', updateCaretPosition);
+    if (currentView === 'typing') {
+      updateCaretPosition();
+      window.addEventListener('resize', updateCaretPosition);
+    }
     return () => window.removeEventListener('resize', updateCaretPosition);
-  }, [updateCaretPosition]);
+  }, [updateCaretPosition, currentView]);
 
   useEffect(() => {
     if (!wordsWrapperRef.current) return;
@@ -348,7 +360,7 @@ const App: React.FC = () => {
   }, []);
 
   const focusInput = () => {
-    if (isFinished) return;
+    if (isFinished || currentView !== 'typing') return;
     inputRef.current?.focus();
     setIsFocused(true);
   };
@@ -362,141 +374,181 @@ const App: React.FC = () => {
   return (
     <>
       <header>
-        <div className="logo" onClick={() => window.location.reload()}>
+        <div className="logo" onClick={() => setCurrentView('typing')}>
           <div className="icon">🕷️</div>
           <div className="text">މަކުނު ޓައިޕް</div>
         </div>
 
-        {!startTime && !isFinished && (
-          <div className="settings-bar">
-            <div className="setting-group">
-              <button
-                className={`mode-btn ${testMode === 'time' ? 'active' : ''}`}
-                onClick={() => { setTestMode('time'); setTestConfig(30); }}
-              >
-                ވަގުތު
-              </button>
-              <button
-                className={`mode-btn ${testMode === 'words' ? 'active' : ''}`}
-                onClick={() => { setTestMode('words'); setTestConfig(25); }}
-              >
-                ބަސްތައް
-              </button>
-            </div>
-            <div className="divider"></div>
-            <div className="setting-group">
-              {(testMode === 'time' ? TIME_MODES : WORD_MODES).map(val => (
+        <div className="header-actions">
+          {(!startTime && !isFinished) || currentView === 'leaderboard' ? (
+            <div className="settings-bar">
+              <div className="setting-group">
                 <button
-                  key={val}
-                  className={`config-btn ${testConfig === val ? 'active' : ''}`}
-                  onClick={() => setTestConfig(val)}
+                  className={`mode-btn ${testMode === 'time' ? 'active' : ''}`}
+                  onClick={() => { setTestMode('time'); setTestConfig(30); }}
                 >
-                  {val}
+                  ވަގުތު
                 </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </header>
-
-      <main onClick={focusInput}>
-        {!isFinished && testMode === 'time' && startTime && (
-          <div className="live-timer">
-            {timeLeft}
-          </div>
-        )}
-
-        {!isFocused && !isFinished && (
-          <div className="focus-overlay">
-            ކިޔަން ފަށަން މިތަނަށް ފިތާލާ
-          </div>
-        )}
-
-        {!isFinished ? (
-          <>
-            <div className={`typing-container ${!isFocused ? 'blurred' : ''}`}>
-              <input
-                ref={inputRef}
-                type="text"
-                className="input-field"
-                onKeyDown={handleKeyDown}
-                autoFocus
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck="false"
-              />
-              <div className="words-wrapper" ref={wordsWrapperRef}>
-                <div className="caret blink" ref={caretRef}></div>
-                {words.map((word: WordState, wIdx: number) => (
-                  <div
-                    key={wIdx}
-                    className={`word ${wIdx === currentWordIndex ? 'active' : ''}`}
+                <button
+                  className={`mode-btn ${testMode === 'words' ? 'active' : ''}`}
+                  onClick={() => { setTestMode('words'); setTestConfig(25); }}
+                >
+                  ބަސްތައް
+                </button>
+              </div>
+              <div className="divider"></div>
+              <div className="setting-group">
+                {(testMode === 'time' ? TIME_MODES : WORD_MODES).map(val => (
+                  <button
+                    key={val}
+                    className={`config-btn ${testConfig === val ? 'active' : ''}`}
+                    onClick={() => setTestConfig(val)}
                   >
-                    {word.letters.map((letter: LetterState, lIdx: number) => (
-                      <span
-                        key={lIdx}
-                        className={`letter ${letter.status}`}
-                      >
-                        {letter.char}
-                      </span>
-                    ))}
-                  </div>
+                    {val}
+                  </button>
                 ))}
               </div>
             </div>
-            <button className="restart-btn" onClick={resetTest} title="Restart (Tab)">
-              ↻
-            </button>
+          ) : null}
+
+          <button
+            className={`leaderboard-btn ${currentView === 'leaderboard' ? 'active' : ''}`}
+            onClick={() => setCurrentView('leaderboard')}
+            title="Leaderboard"
+          >
+            🏆
+          </button>
+        </div>
+      </header>
+
+      <main onClick={focusInput}>
+        {currentView === 'typing' ? (
+          <>
+            {!isFinished && testMode === 'time' && startTime && (
+              <div className="live-timer">
+                {timeLeft}
+              </div>
+            )}
+
+            {!isFocused && !isFinished && (
+              <div className="focus-overlay">
+                ކިޔަން ފަށަން މިތަނަށް ފިތާލާ
+              </div>
+            )}
+
+            {!isFinished ? (
+              <>
+                <div className={`typing-container ${!isFocused ? 'blurred' : ''}`}>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className="input-field"
+                    onKeyDown={handleKeyDown}
+                    autoFocus
+                    autoCapitalize="off"
+                    autoCorrect="off"
+                    spellCheck="false"
+                  />
+                  <div className="words-wrapper" ref={wordsWrapperRef}>
+                    <div className="caret blink" ref={caretRef}></div>
+                    {words.map((word: WordState, wIdx: number) => (
+                      <div
+                        key={wIdx}
+                        className={`word ${wIdx === currentWordIndex ? 'active' : ''}`}
+                      >
+                        {word.letters.map((letter: LetterState, lIdx: number) => (
+                          <span
+                            key={lIdx}
+                            className={`letter ${letter.status}`}
+                          >
+                            {letter.char}
+                          </span>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button className="restart-btn" onClick={resetTest} title="Restart (Tab)">
+                  ↻
+                </button>
+              </>
+            ) : (
+              <div className="results-container">
+                <div className="results-summary">
+                  <div className="stat-main">
+                    <div className="label">WPM</div>
+                    <div className="value">{wpm}</div>
+                  </div>
+                  <div className="stat-main">
+                    <div className="label">Accuracy</div>
+                    <div className="value">{accuracy}%</div>
+                  </div>
+                  <div className="stat-secondary">
+                    <div className="stat-item">
+                      <span className="label">Raw WPM</span>
+                      <span className="value">{rawWpm}</span>
+                    </div>
+                    <div className="stat-item">
+                      <span className="label">Mode</span>
+                      <span className="value">{testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} {testMode === 'time' ? 'ސިކުންތު' : 'ބަސް'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {!hasSaved ? (
+                  <div className="save-score-container">
+                    <input
+                      type="text"
+                      placeholder="ނަން ޖައްސަވާ..."
+                      className="name-input"
+                      value={playerName}
+                      onChange={(e) => setPlayerName(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleSaveScore()}
+                      maxLength={15}
+                    />
+                    <button className="save-btn" onClick={handleSaveScore}>
+                      ސްކޯ ސޭވް ކުރަން
+                    </button>
+                  </div>
+                ) : (
+                  <div className="score-saved">ސްކޯ ސޭވް ކުރެވިއްޖެ! ✨</div>
+                )}
+
+                <button className="restart-btn" onClick={resetTest}>
+                  ↻ އަލުން ފަށަން
+                </button>
+
+                <div className="leaderboard">
+                  <h2 className="leaderboard-title">
+                    {testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} - އެންމެ މަތީ ސްކޯތައް
+                  </h2>
+                  <div className="leaderboard-list">
+                    {isLoadingLeaderboard ? (
+                      <div className="leaderboard-empty">ލީޑަރބޯޑު ލޯޑުވަނީ...</div>
+                    ) : leaderboard.length === 0 ? (
+                      <div className="leaderboard-empty">އަދި މި ކެޓަގަރީއިން އެއްވެސް ސްކޯއެއް ނެތް</div>
+                    ) : (
+                      leaderboard.map((entry: LeaderboardEntry, idx: number) => (
+                        <div key={idx} className="leaderboard-item">
+                          <span className="rank">#{idx + 1}</span>
+                          <span className="l-name">{entry.name}</span>
+                          <span className="l-wpm">{entry.wpm} WPM</span>
+                          <span className="l-raw">({entry.raw_wpm})</span>
+                          <span className="l-acc">{entry.accuracy}%</span>
+                          <span className="l-date">{formatDate(entry.created_at)}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <div className="results-container">
-            <div className="results-summary">
-              <div className="stat-main">
-                <div className="label">WPM</div>
-                <div className="value">{wpm}</div>
-              </div>
-              <div className="stat-main">
-                <div className="label">Accuracy</div>
-                <div className="value">{accuracy}%</div>
-              </div>
-              <div className="stat-secondary">
-                <div className="stat-item">
-                  <span className="label">Raw WPM</span>
-                  <span className="value">{rawWpm}</span>
-                </div>
-                <div className="stat-item">
-                  <span className="label">Mode</span>
-                  <span className="value">{testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} {testMode === 'time' ? 'ސިކުންތު' : 'ބަސް'}</span>
-                </div>
-              </div>
-            </div>
-
-            {!hasSaved ? (
-              <div className="save-score-container">
-                <input
-                  type="text"
-                  placeholder="ނަން ޖައްސަވާ..."
-                  className="name-input"
-                  value={playerName}
-                  onChange={(e) => setPlayerName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSaveScore()}
-                  maxLength={15}
-                />
-                <button className="save-btn" onClick={handleSaveScore}>
-                  ސްކޯ ސޭވް ކުރަން
-                </button>
-              </div>
-            ) : (
-              <div className="score-saved">ސްކޯ ސޭވް ކުރެވިއްޖެ! ✨</div>
-            )}
-
-            <button className="restart-btn" onClick={resetTest}>
-              ↻ އަލުން ފަށަން
-            </button>
-
-            <div className="leaderboard">
-              <h2 className="leaderboard-title">
-                {testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} - އެންމެ މަތީ ސްކޯތައް
+            <div className="leaderboard" style={{ marginTop: 0 }}>
+              <h2 className="leaderboard-title" style={{ fontSize: '2rem', marginBottom: '2rem' }}>
+                {testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} - ގްލޯބަލް ލީޑަރބޯޑު
               </h2>
               <div className="leaderboard-list">
                 {isLoadingLeaderboard ? (
@@ -516,6 +568,9 @@ const App: React.FC = () => {
                   ))
                 )}
               </div>
+              <button className="restart-btn" style={{ fontSize: '1.2rem', marginTop: '3rem' }} onClick={() => setCurrentView('typing')}>
+                ← އަނބުރާ ޓައިޕިންގް އަށް
+              </button>
             </div>
           </div>
         )}

@@ -10,7 +10,7 @@ export const supabase = isConfigured
     ? createClient(supabaseUrl, supabaseAnonKey)
     : {
         from: () => ({
-            select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ limit: () => Promise.resolve({ data: [], error: null }) }) }) }) }),
+            select: () => ({ eq: () => ({ eq: () => ({ order: () => ({ limit: () => Promise.resolve({ data: [], error: new Error('Supabase not configured') }) }) }) }) }),
             insert: () => Promise.resolve({ error: new Error('Supabase not configured') })
         })
     } as any;
