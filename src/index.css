@@ -626,9 +626,21 @@ footer {
   }
 
   main {
-    padding: 0 2rem;
-    /* Sync main padding with header */
+    padding: 0 1.5rem;
+    justify-content: flex-start;
+    /* Move content up */
+    padding-top: 2rem;
   }
+
+  .results-container {
+    gap: 1.5rem;
+  }
+
+  .leaderboard {
+    margin-top: 1.5rem;
+  }
+
+  /* Sync main padding with header */
 
   .words-wrapper {
     font-size: 1.875rem;

@@ -127,12 +127,38 @@ const App: React.FC = () => {
   }, [testMode, testConfig, getNewWords, fetchLeaderboard]);
 
   useEffect(() => {
+    // Ensure testConfig is valid for the current mode
+    const currentModes = testMode === 'time' ? TIME_MODES : WORD_MODES;
+    if (!currentModes.includes(testConfig)) {
+      setTestConfig(currentModes[0]);
+    }
+
     if (currentView === 'typing') {
       if (!startTime && !isFinished) resetTest();
     } else {
       fetchLeaderboard();
     }
   }, [currentView, testMode, testConfig, fetchLeaderboard]);
+
+  // Connection Test
+  useEffect(() => {
+    const testDB = async () => {
+      console.log('--- Database Connection Test ---');
+      try {
+        const { error } = await supabase.from('leaderboard').select('count', { count: 'exact', head: true });
+        if (error) {
+          console.error('DB Test Result: ERROR', error.message);
+          console.error('Possible cause: Table "leaderboard" might not exist or RLS is blocking SELECT.');
+        } else {
+          console.log('DB Test Result: SUCCESS! Connected to "leaderboard" table.');
+        }
+      } catch (e) {
+        console.error('DB Test Result: CRITICAL FAILURE', e);
+      }
+      console.log('-------------------------------');
+    };
+    testDB();
+  }, []);
 
   const handleSaveScore = async () => {
     if (!playerName.trim() || hasSaved) return;
@@ -147,17 +173,16 @@ const App: React.FC = () => {
     };
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('leaderboard')
-        .insert([newEntry])
-        .select();
+        .insert([newEntry]);
 
       if (error) {
         console.error('Score Save Error:', error.message, error.details);
         throw error;
       }
 
-      console.log('Score saved successfully:', data);
+      console.log('Score saved successfully!');
 
       setHasSaved(true);
       localStorage.setItem('makunu_player_name', playerName.trim());
