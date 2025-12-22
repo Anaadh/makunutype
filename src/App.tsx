@@ -4,7 +4,7 @@ import { phoneticMap } from './data/keymap';
 import { supabase } from './lib/supabase';
 import './App.css';
 
-const WORD_MODES = [10, 25, 50, 100];
+const WORD_MODES = [5, 10, 20];
 const TIME_MODES = [15, 30, 60, 120];
 
 type TestMode = 'time' | 'words';
@@ -37,7 +37,7 @@ const App: React.FC = () => {
 
   // Config state
   const [testMode, setTestMode] = useState<TestMode>('words');
-  const [testConfig, setTestConfig] = useState<number>(25);
+  const [testConfig, setTestConfig] = useState<number>(10);
 
   // Game state
   const [words, setWords] = useState<WordState[]>([]);
@@ -85,7 +85,10 @@ const App: React.FC = () => {
         .order('wpm', { ascending: false })
         .limit(10);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Leaderboard Fetch Error:', error.message, error.details);
+        throw error;
+      }
       if (data) {
         setLeaderboard(data);
       }
@@ -143,11 +146,17 @@ const App: React.FC = () => {
     };
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('leaderboard')
-        .insert([newEntry]);
+        .insert([newEntry])
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Score Save Error:', error.message, error.details);
+        throw error;
+      }
+
+      console.log('Score saved successfully:', data);
 
       setHasSaved(true);
       localStorage.setItem('makunu_player_name', playerName.trim());
@@ -344,7 +353,38 @@ const App: React.FC = () => {
       }
 
       setWords(newWords);
-      setCurrentLetterIndex(newValue.length);
+      const newTypedValue = newValue;
+      setCurrentLetterIndex(newTypedValue.length);
+
+      // Auto-end test if last character of last word is reached (in words mode)
+      if (testMode === 'words' &&
+        currentWordIndex === testConfig - 1 &&
+        newTypedValue === currentWord.original) {
+        endTest();
+      }
+    }
+  };
+
+  const handleNameInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Enter') {
+      return;
+    }
+
+    if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+      e.preventDefault();
+      const mappedChar = phoneticMap[e.key] || e.key;
+      const target = e.target as HTMLInputElement;
+      const start = target.selectionStart || 0;
+      const end = target.selectionEnd || 0;
+      const val = target.value;
+
+      const newVal = val.substring(0, start) + mappedChar + val.substring(end);
+      setPlayerName(newVal);
+
+      // Reset cursor position after state update
+      setTimeout(() => {
+        target.setSelectionRange(start + mappedChar.length, start + mappedChar.length);
+      }, 0);
     }
   };
 
@@ -503,7 +543,13 @@ const App: React.FC = () => {
                       className="name-input"
                       value={playerName}
                       onChange={(e) => setPlayerName(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSaveScore()}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSaveScore();
+                        } else {
+                          handleNameInputKeyDown(e);
+                        }
+                      }}
                       maxLength={15}
                     />
                     <button className="save-btn" onClick={handleSaveScore}>
@@ -579,7 +625,9 @@ const App: React.FC = () => {
       <footer>
         ކީބޯޑު ބޭނުންކޮށްގެން ޓައިޕް ކުރަން ފަށާ (Tab އަށް ފިތާލުމުން އަލުން ފެށޭނެ)
         <br />
-        <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>MakunuType v2.0 - Built with love for Dhivehi</span>
+        <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>
+          Makunutype - <a href="https://github.com/anaadh" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Kobakae</a> 2025
+        </span>
       </footer>
     </>
   );

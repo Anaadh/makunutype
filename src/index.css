@@ -188,8 +188,9 @@ main {
 }
 
 .words-wrapper {
-  font-size: 2.2rem;
-  line-height: 4rem;
+  font-size: 2.75rem;
+  /* Increased to 125% of 2.2rem */
+  line-height: 4.5rem;
   position: relative;
   display: flex;
   flex-wrap: wrap;
@@ -240,7 +241,7 @@ main {
 .caret {
   position: absolute;
   width: 3px;
-  height: 2.8rem;
+  height: 3.4rem;
   background-color: var(--caret-color);
   transition: all 0.1s linear;
   z-index: 10;
@@ -536,13 +537,14 @@ footer {
   }
 
   .words-wrapper {
-    font-size: 1.8rem;
-    line-height: 3rem;
+    font-size: 2.25rem;
+    /* Proportional increase */
+    line-height: 3.5rem;
     gap: 0.5rem;
   }
 
   .caret {
-    height: 2.3rem;
+    height: 2.8rem;
   }
 
   .results-summary {
@@ -585,12 +587,13 @@ footer {
   }
 
   .words-wrapper {
-    font-size: 1.5rem;
-    line-height: 2.5rem;
+    font-size: 1.875rem;
+    /* Proportional increase */
+    line-height: 2.8rem;
   }
 
   .caret {
-    height: 1.9rem;
+    height: 2.3rem;
   }
 
   .results-summary {
