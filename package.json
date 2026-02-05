@@ -8,7 +8,8 @@
     "server": "node server/index.js",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "init-db": "node server/setup.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.89.0",
