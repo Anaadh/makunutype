@@ -60,7 +60,7 @@ const App: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isFocused, setIsFocused] = useState(true);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
-  const [showHelper, setShowHelper] = useState(localStorage.getItem('makunu_show_helper') === 'true');
+  const [showHelper, setShowHelper] = useState(localStorage.getItem('makunu_show_helper') === 'true' || true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsWrapperRef = useRef<HTMLDivElement>(null);
@@ -79,18 +79,11 @@ const App: React.FC = () => {
     setLeaderboard([]); // Clear stale data before loading new category
     setIsLoadingLeaderboard(true);
     try {
-      const { data, error } = await supabase
-        .from('leaderboard')
-        .select('*')
-        .eq('mode', testMode)
-        .eq('config', testConfig)
-        .order('wpm', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      if (data) {
-        setLeaderboard(data);
-      }
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/leaderboard';
+      const response = await fetch(`${apiUrl}?mode=${testMode}&config=${testConfig}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const data = await response.json();
+      setLeaderboard(data);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
       const saved = localStorage.getItem(`makunu_leaderboard_v3_${testMode}_${testConfig}`);
@@ -148,11 +141,16 @@ const App: React.FC = () => {
     };
 
     try {
-      const { error } = await supabase
-        .from('leaderboard')
-        .insert([newEntry]);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/leaderboard';
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newEntry),
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Network response was not ok');
 
       setHasSaved(true);
       localStorage.setItem('makunu_player_name', playerName.trim());
@@ -413,7 +411,7 @@ const App: React.FC = () => {
     <>
       <header>
         <div className="logo" onClick={() => setCurrentView('typing')}>
-          <div className="icon">🕷️</div>
+          <div className="icon"><img src="/logo.png" alt="Logo" width={40} /></div>
           <div className="text">މަކުނު ޓައިޕް</div>
         </div>
 
@@ -547,7 +545,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="stat-item">
                       <span className="label">Mode</span>
-                      <span className="value">{testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} {testMode === 'time' ? 'ސިކުންތު' : 'ބަސް'}</span>
+                      <span className="value" style={{ fontFamily: 'var(--thaana-font)' }}>{testMode === 'time' ? 'ވަގުތު' : 'ބަސްތައް'} {testConfig} {testMode === 'time' ? 'ސިކުންތު' : 'ބަސް'}</span>
                     </div>
                   </div>
                 </div>
@@ -642,8 +640,8 @@ const App: React.FC = () => {
       <footer>
         ކީބޯޑު ބޭނުންކޮށްގެން ޓައިޕް ކުރަން ފަށާ (Tab އަށް ފިތާލުމުން އަލުން ފެށޭނެ)
         <br />
-        <span style={{ opacity: 0.5, fontSize: '0.7rem' }}>
-          Makunutype - <a href="https://github.com/anaadh" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'underline' }}>Kobakae</a> 2025
+        <span style={{ opacity: 0.5, fontSize: '1rem', color: 'var(--main-color)' }}>
+          A CSR Project of <a href="https://javaabu.com" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit', textDecoration: 'none' }}><img src="/javaabu-logo-white.svg" alt="Javaabu" style={{ width: '1rem', height: '1rem' }} /> Javaabu</a> {new Date().getFullYear()}
         </span>
       </footer>
     </>
