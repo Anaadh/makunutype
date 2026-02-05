@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { dhivehiWords } from './data/words';
 import { phoneticMap, reversePhoneticMap } from './data/keymap';
-import { supabase } from './lib/supabase';
 import './App.css';
 
 const WORD_MODES = [5, 10, 20];
@@ -60,7 +59,7 @@ const App: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isFocused, setIsFocused] = useState(true);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
-  const [showHelper, setShowHelper] = useState(localStorage.getItem('makunu_show_helper') === 'true' || true);
+  const [showHelper, setShowHelper] = useState<boolean>(localStorage.getItem('makunu_show_helper') === 'true' || true);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsWrapperRef = useRef<HTMLDivElement>(null);
