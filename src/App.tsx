@@ -59,6 +59,7 @@ const App: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isFocused, setIsFocused] = useState(true);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const [showHelper, setShowHelper] = useState<boolean>(localStorage.getItem('makunu_show_helper') === 'true' || true);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -77,16 +78,16 @@ const App: React.FC = () => {
   const fetchLeaderboard = useCallback(async () => {
     setLeaderboard([]); // Clear stale data before loading new category
     setIsLoadingLeaderboard(true);
+    setLeaderboardError(null);
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/leaderboard';
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/leaderboard';
       const response = await fetch(`${apiUrl}?mode=${testMode}&config=${testConfig}`);
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       setLeaderboard(data);
     } catch (err) {
       console.error('Error fetching leaderboard:', err);
-      const saved = localStorage.getItem(`makunu_leaderboard_v3_${testMode}_${testConfig}`);
-      if (saved) setLeaderboard(JSON.parse(saved));
+      setLeaderboardError('ލީޑަރބޯޑު ލޯޑު ނުކުރެވުނު! ފަހުން އަލުން މަސައްކަތް ކޮށްލައްވާ.');
     } finally {
       setIsLoadingLeaderboard(false);
     }
@@ -140,7 +141,7 @@ const App: React.FC = () => {
     };
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api/leaderboard';
+      const apiUrl = import.meta.env.VITE_API_URL || '/api/leaderboard';
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
@@ -156,15 +157,7 @@ const App: React.FC = () => {
       fetchLeaderboard();
     } catch (err) {
       console.error('Error saving score:', err);
-      const localKey = `makunu_leaderboard_v3_${testMode}_${testConfig}`;
-      const saved = localStorage.getItem(localKey);
-      const localLeaderboard = saved ? JSON.parse(saved) : [];
-      const updated = [...localLeaderboard, { ...newEntry, created_at: new Date().toISOString() }]
-        .sort((a, b) => b.wpm - a.wpm)
-        .slice(0, 10);
-      localStorage.setItem(localKey, JSON.stringify(updated));
-      setLeaderboard(updated);
-      setHasSaved(true);
+      alert('ސްކޯ ސޭވް ނުކުރެވުނު! ފަހުން އަލުން މަސައްކަތް ކޮށްލައްވާ.');
     }
   };
 
@@ -585,6 +578,8 @@ const App: React.FC = () => {
                   <div className="leaderboard-list">
                     {isLoadingLeaderboard ? (
                       <div className="leaderboard-empty">ލީޑަރބޯޑު ލޯޑުވަނީ...</div>
+                    ) : leaderboardError ? (
+                      <div className="leaderboard-empty" style={{ color: '#ff4b2b' }}>{leaderboardError}</div>
                     ) : leaderboard.length === 0 ? (
                       <div className="leaderboard-empty">އަދި މި ކެޓަގަރީއިން އެއްވެސް ސްކޯއެއް ނެތް</div>
                     ) : (
@@ -613,6 +608,8 @@ const App: React.FC = () => {
               <div className="leaderboard-list">
                 {isLoadingLeaderboard ? (
                   <div className="leaderboard-empty">ލީޑަރބޯޑު ލޯޑުވަނީ...</div>
+                ) : leaderboardError ? (
+                  <div className="leaderboard-empty" style={{ color: '#ff4b2b' }}>{leaderboardError}</div>
                 ) : leaderboard.length === 0 ? (
                   <div className="leaderboard-empty">އަދި މި ކެޓަގަރީއިން އެއްވެސް ސްކޯއެއް ނެތް</div>
                 ) : (
