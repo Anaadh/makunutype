@@ -303,6 +303,22 @@ const App: React.FC = () => {
     }
   };
 
+  const handleSpaceInput = () => {
+    if (inputValue.length > 0) {
+      if (testMode === 'words' && currentWordIndex === testConfig - 1) {
+        endTest();
+      } else {
+        if (testMode === 'time' && currentWordIndex > words.length - 20) {
+          setWords((prev: WordState[]) => [...prev, ...getNewWords(50)]);
+        }
+
+        setCurrentWordIndex((prev: number) => prev + 1);
+        setCurrentLetterIndex(0);
+        setInputValue('');
+      }
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isFinished) return;
 
@@ -316,19 +332,7 @@ const App: React.FC = () => {
 
     if (e.key === ' ') {
       e.preventDefault();
-      if (inputValue.length > 0) {
-        if (testMode === 'words' && currentWordIndex === testConfig - 1) {
-          endTest();
-        } else {
-          if (testMode === 'time' && currentWordIndex > words.length - 20) {
-            setWords((prev: WordState[]) => [...prev, ...getNewWords(50)]);
-          }
-
-          setCurrentWordIndex((prev: number) => prev + 1);
-          setCurrentLetterIndex(0);
-          setInputValue('');
-        }
-      }
+      handleSpaceInput();
       return;
     }
 
@@ -356,17 +360,12 @@ const App: React.FC = () => {
     const val = e.target.value;
     if (val.length > 0) {
       const char = val.slice(-1);
-      if (char !== ' ') {
+      if (char === ' ') {
+        handleSpaceInput();
+      } else {
         handleCharInput(char);
       }
       // Clear the input so it's ready for the next character
-      setInputValue((prev) => {
-        // We only clear if the internal state says we should keep it empty
-        // But since we use inputValue for calculations, we actually need to sync it.
-        // Wait, if we clear e.target.value, we lose the native behavior.
-        // Let's rethink: if we keep the input empty, we can detect the last char.
-        return prev;
-      });
       e.target.value = '';
     }
   };
