@@ -17,3 +17,9 @@ export const phoneticMap: { [key: string]: string } = {
     'Z': 'ޡ', 'X': 'ޘ', 'C': 'ޝ', 'V': 'ޥ', 'B': 'ޞ', 'N': 'ޏ', 'M': 'ޟ', '<': '>', '>': '<', '?': '؟',
     '[': '[', ']': ']', '{': '{', '}': '}'
 };
+
+// Reverse mapping for helper toggle
+export const reversePhoneticMap: { [key: string]: string } = Object.entries(phoneticMap).reduce((acc, [key, val]) => {
+    acc[val] = key;
+    return acc;
+}, {} as { [key: string]: string });

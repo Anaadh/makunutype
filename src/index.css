@@ -163,8 +163,8 @@ main {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding: 0 10%;
-  max-width: 1000px;
+  padding: 0 5rem;
+  max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   position: relative;
@@ -183,14 +183,12 @@ main {
   width: 100%;
   position: relative;
   direction: rtl;
-  height: 150px;
-  overflow: hidden;
 }
 
 .words-wrapper {
   font-size: 2.75rem;
   /* Increased to 125% of 2.2rem */
-  line-height: 4.5rem;
+  line-height: 5.5rem;
   position: relative;
   display: flex;
   flex-wrap: wrap;
@@ -236,6 +234,18 @@ main {
 
 .letter.extra {
   color: var(--error-extra-color);
+}
+
+.letter-trans {
+  position: absolute;
+  top: 2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.8rem;
+  font-family: var(--font-family);
+  opacity: 0.4;
+  color: var(--text-color);
+  pointer-events: none;
 }
 
 .caret {

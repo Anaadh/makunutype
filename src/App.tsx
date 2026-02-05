@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { dhivehiWords } from './data/words';
-import { phoneticMap } from './data/keymap';
+import { phoneticMap, reversePhoneticMap } from './data/keymap';
 import { supabase } from './lib/supabase';
 import './App.css';
 
@@ -60,6 +60,7 @@ const App: React.FC = () => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isFocused, setIsFocused] = useState(true);
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+  const [showHelper, setShowHelper] = useState(localStorage.getItem('makunu_show_helper') === 'true');
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsWrapperRef = useRef<HTMLDivElement>(null);
@@ -116,9 +117,6 @@ const App: React.FC = () => {
     setAccuracy(0);
     setTimeLeft(testMode === 'time' ? testConfig : 0);
 
-    if (wordsWrapperRef.current) {
-      wordsWrapperRef.current.style.transform = 'translateY(0)';
-    }
     inputRef.current?.focus();
     fetchLeaderboard();
   }, [testMode, testConfig, getNewWords, fetchLeaderboard]);
@@ -284,19 +282,6 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', updateCaretPosition);
   }, [updateCaretPosition, currentView]);
 
-  useEffect(() => {
-    if (!wordsWrapperRef.current) return;
-    const activeWord = wordsWrapperRef.current.querySelector('.word.active') as HTMLElement;
-    if (activeWord) {
-      const wordTop = activeWord.offsetTop;
-      const lineHeight = 64;
-      if (wordTop > lineHeight) {
-        wordsWrapperRef.current.style.transform = `translateY(-${wordTop - lineHeight}px)`;
-      } else {
-        wordsWrapperRef.current.style.transform = `translateY(0)`;
-      }
-    }
-  }, [currentWordIndex]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isFinished) return;
@@ -461,6 +446,20 @@ const App: React.FC = () => {
                   </button>
                 ))}
               </div>
+              <div className="divider"></div>
+              <div className="setting-group">
+                <button
+                  className={`mode-btn ${showHelper ? 'active' : ''}`}
+                  onClick={() => {
+                    const newVal = !showHelper;
+                    setShowHelper(newVal);
+                    localStorage.setItem('makunu_show_helper', String(newVal));
+                  }}
+                  title="Show English keys helper"
+                >
+                  އެހީ
+                </button>
+              </div>
             </div>
           ) : null}
 
@@ -515,6 +514,11 @@ const App: React.FC = () => {
                             className={`letter ${letter.status}`}
                           >
                             {letter.char}
+                            {showHelper && letter.status === 'none' && (
+                              <span className="letter-trans">
+                                {reversePhoneticMap[letter.char] || ''}
+                              </span>
+                            )}
                           </span>
                         ))}
                       </div>
