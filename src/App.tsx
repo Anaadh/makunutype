@@ -273,6 +273,36 @@ const App: React.FC = () => {
   }, [updateCaretPosition, currentView]);
 
 
+  const handleCharInput = (char: string) => {
+    if (isFinished || !startTime) {
+      if (!isFinished) setStartTime(Date.now());
+    }
+
+    const mappedChar = phoneticMap[char] || char;
+    const newWords = [...words];
+    const currentWord = newWords[currentWordIndex];
+    const typedIdx = inputValue.length;
+
+    if (typedIdx < currentWord.original.length) {
+      const expected = currentWord.original[typedIdx];
+      currentWord.letters[typedIdx].status = mappedChar === expected ? 'correct' : 'incorrect';
+    } else {
+      currentWord.letters.push({ char: mappedChar, status: 'extra' });
+    }
+
+    setWords(newWords);
+    const newValue = inputValue + mappedChar;
+    setInputValue(newValue);
+    setCurrentLetterIndex(newValue.length);
+
+    // Auto-end test if last character of last word is reached (in words mode)
+    if (testMode === 'words' &&
+      currentWordIndex === testConfig - 1 &&
+      newValue === currentWord.original) {
+      endTest();
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (isFinished) return;
 
@@ -283,10 +313,6 @@ const App: React.FC = () => {
     }
 
     if (!isFocused) return;
-
-    if (!startTime && e.key.length === 1 && e.key !== ' ') {
-      setStartTime(Date.now());
-    }
 
     if (e.key === ' ') {
       e.preventDefault();
@@ -322,34 +348,26 @@ const App: React.FC = () => {
       }
       return;
     }
+  };
 
-    if (e.key.length === 1) {
-      e.preventDefault();
-      const mappedChar = phoneticMap[e.key] || e.key;
-      const newValue = inputValue + mappedChar;
-      setInputValue(newValue);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (isFinished) return;
 
-      const newWords = [...words];
-      const currentWord = newWords[currentWordIndex];
-      const typedIdx = inputValue.length;
-
-      if (typedIdx < currentWord.original.length) {
-        const expected = currentWord.original[typedIdx];
-        currentWord.letters[typedIdx].status = mappedChar === expected ? 'correct' : 'incorrect';
-      } else {
-        currentWord.letters.push({ char: mappedChar, status: 'extra' });
+    const val = e.target.value;
+    if (val.length > 0) {
+      const char = val.slice(-1);
+      if (char !== ' ') {
+        handleCharInput(char);
       }
-
-      setWords(newWords);
-      const newTypedValue = newValue;
-      setCurrentLetterIndex(newTypedValue.length);
-
-      // Auto-end test if last character of last word is reached (in words mode)
-      if (testMode === 'words' &&
-        currentWordIndex === testConfig - 1 &&
-        newTypedValue === currentWord.original) {
-        endTest();
-      }
+      // Clear the input so it's ready for the next character
+      setInputValue((prev) => {
+        // We only clear if the internal state says we should keep it empty
+        // But since we use inputValue for calculations, we actually need to sync it.
+        // Wait, if we clear e.target.value, we lose the native behavior.
+        // Let's rethink: if we keep the input empty, we can detect the last char.
+        return prev;
+      });
+      e.target.value = '';
     }
   };
 
@@ -486,6 +504,7 @@ const App: React.FC = () => {
                     type="text"
                     className="input-field"
                     onKeyDown={handleKeyDown}
+                    onChange={handleInputChange}
                     autoFocus
                     autoCapitalize="off"
                     autoCorrect="off"
