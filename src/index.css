@@ -547,14 +547,18 @@ footer {
   }
 
   .typing-container {
-    height: 120px;
+    height: auto;
+    min-height: 120px;
   }
 
   .words-wrapper {
     font-size: 2.25rem;
-    /* Proportional increase */
-    line-height: 5.8rem;
+    line-height: 4.5rem;
     gap: 0.5rem;
+  }
+
+  .letter-trans {
+    top: 2.1rem;
   }
 
   .caret {
@@ -658,8 +662,11 @@ footer {
 
   .words-wrapper {
     font-size: 1.875rem;
-    /* Proportional increase */
-    line-height: 5.8rem;
+    line-height: 3.8rem;
+  }
+
+  .letter-trans {
+    top: 1.8rem;
   }
 
   .caret {
