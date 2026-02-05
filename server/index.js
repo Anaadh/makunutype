@@ -1,7 +1,12 @@
+import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import cors from 'cors';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -47,6 +52,14 @@ app.post('/api/leaderboard', async (req, res) => {
         console.error('Error saving score:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
+});
+
+// Serve static files from the 'dist' directory
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Catch-all route to serve the frontend's index.html
+app.get('*all', (req, res) => {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 const PORT = process.env.SERVER_PORT || 3001;
