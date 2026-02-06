@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import express from 'express';
+import session from 'express-session';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -12,8 +13,22 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: true,
+    credentials: true // Required for sessions with CORS
+}));
 app.use(express.json());
+
+app.use(session({
+    secret: process.env.SESSION_SECRET || 'makunu-secret',
+    resave: false,
+    saveUninitialized: true,
+    cookie: {
+        secure: false, // Set to true if using HTTPS
+        maxAge: 3600000 // 1 hour
+    }
+}));
+
 
 const pool = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
@@ -40,9 +55,23 @@ app.get('/api/leaderboard', async (req, res) => {
     }
 });
 
+// POST /api/session-score
+app.post('/api/session-score', (req, res) => {
+    const { wpm, raw_wpm, accuracy, mode, config } = req.body;
+    req.session.lastScore = { wpm, raw_wpm, accuracy, mode, config };
+    res.json({ success: true });
+});
+
 // POST /api/leaderboard
 app.post('/api/leaderboard', async (req, res) => {
-    const { name, wpm, raw_wpm, accuracy, mode, config, recaptchaToken } = req.body;
+    const { name, recaptchaToken } = req.body;
+    const lastScore = req.session.lastScore;
+
+    if (!lastScore) {
+        return res.status(400).json({ error: 'No test attempt found in session' });
+    }
+
+    const { wpm, raw_wpm, accuracy, mode, config } = lastScore;
 
     // Verify Recaptcha
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
@@ -71,12 +100,17 @@ app.post('/api/leaderboard', async (req, res) => {
             'INSERT INTO leaderboard (name, wpm, raw_wpm, accuracy, mode, config) VALUES (?, ?, ?, ?, ?, ?)',
             [name, wpm, raw_wpm, accuracy, mode, config]
         );
+
+        // Clear session score after saving
+        delete req.session.lastScore;
+
         res.status(201).json({ id: result.insertId });
     } catch (error) {
         console.error('Error saving score:', error);
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
 
 // Serve static files from the 'dist' directory
 app.use(express.static(path.join(__dirname, '../dist')));

@@ -84,7 +84,9 @@ const App: React.FC = () => {
     setLeaderboardError(null);
     try {
       const apiUrl = import.meta.env.VITE_API_URL || '/api/leaderboard';
-      const response = await fetch(`${apiUrl}?mode=${testMode}&config=${testConfig}`);
+      const response = await fetch(`${apiUrl}?mode=${testMode}&config=${testConfig}`, {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error('Network response was not ok');
       const data = await response.json();
       setLeaderboard(data);
@@ -131,6 +133,28 @@ const App: React.FC = () => {
     }
   }, [currentView, testMode, testConfig, fetchLeaderboard]);
 
+  const saveSessionScore = useCallback(async (stats: { wpm: number, rawWpm: number, accuracy: number }) => {
+    try {
+      const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/leaderboard$/, '') + '/session-score';
+      await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          wpm: stats.wpm,
+          raw_wpm: stats.rawWpm,
+          accuracy: stats.accuracy,
+          mode: testMode,
+          config: testConfig
+        }),
+      });
+    } catch (err) {
+      console.error('Error saving session score:', err);
+    }
+  }, [testMode, testConfig]);
+
   const handleSaveScore = async () => {
     if (!playerName.trim() || hasSaved) return;
 
@@ -141,13 +165,8 @@ const App: React.FC = () => {
       return;
     }
 
-    const newEntry = {
+    const payload = {
       name: playerName.trim(),
-      wpm,
-      raw_wpm: rawWpm,
-      accuracy,
-      mode: testMode,
-      config: testConfig,
       recaptchaToken
     };
 
@@ -158,7 +177,8 @@ const App: React.FC = () => {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newEntry),
+        credentials: 'include',
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) throw new Error('Network response was not ok');
@@ -249,13 +269,21 @@ const App: React.FC = () => {
     setWpm(calculatedWpm);
     setRawWpm(calculatedRawWpm);
     setAccuracy(calculatedAccuracy);
-  }, [words, startTime, endTime, currentWordIndex, testMode, testConfig]);
+
+    // Save to session immediately
+    saveSessionScore({
+      wpm: calculatedWpm,
+      rawWpm: calculatedRawWpm,
+      accuracy: calculatedAccuracy
+    });
+  }, [words, startTime, endTime, currentWordIndex, testMode, testConfig, saveSessionScore]);
 
   useEffect(() => {
     if (isFinished) {
       calculateStats();
     }
   }, [isFinished, calculateStats]);
+
 
   const updateCaretPosition = useCallback(() => {
     if (!caretRef.current || !wordsWrapperRef.current) return;
