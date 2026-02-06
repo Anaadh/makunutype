@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { dhivehiWords } from './data/words';
 import { phoneticMap, reversePhoneticMap } from './data/keymap';
+import ReCAPTCHA from 'react-google-recaptcha';
 import './App.css';
 
 const WORD_MODES = [5, 10, 20];
@@ -61,11 +62,13 @@ const App: React.FC = () => {
   const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const [showHelper, setShowHelper] = useState<boolean>(localStorage.getItem('makunu_show_helper') === 'true' || true);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsWrapperRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<number | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   const getNewWords = useCallback((count: number): WordState[] => {
     const shuffled = [...dhivehiWords].sort(() => Math.random() - 0.5);
@@ -131,13 +134,21 @@ const App: React.FC = () => {
   const handleSaveScore = async () => {
     if (!playerName.trim() || hasSaved) return;
 
-    const newEntry: Omit<LeaderboardEntry, 'id' | 'created_at'> = {
+    // Check if recaptcha key is present in env, if so require token
+    const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+    if (siteKey && !recaptchaToken) {
+      alert('Please complete the captcha!');
+      return;
+    }
+
+    const newEntry = {
       name: playerName.trim(),
       wpm,
       raw_wpm: rawWpm,
       accuracy,
       mode: testMode,
-      config: testConfig
+      config: testConfig,
+      recaptchaToken
     };
 
     try {
@@ -154,6 +165,13 @@ const App: React.FC = () => {
 
       setHasSaved(true);
       localStorage.setItem('makunu_player_name', playerName.trim());
+
+      // Reset Recaptcha
+      if (recaptchaRef.current) {
+        recaptchaRef.current.reset();
+      }
+      setRecaptchaToken(null);
+
       fetchLeaderboard();
     } catch (err) {
       console.error('Error saving score:', err);
@@ -561,23 +579,36 @@ const App: React.FC = () => {
                 </div>
 
                 {!hasSaved ? (
-                  <div className="save-score-container">
-                    <input
-                      type="text"
-                      placeholder="ނަން ޖައްސަވާ..."
-                      className="name-input"
-                      value={playerName}
-                      onChange={(e) => setPlayerName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSaveScore();
-                        } else {
-                          handleNameInputKeyDown(e);
-                        }
-                      }}
-                      maxLength={15}
-                    />
-                    <button className="save-btn" onClick={handleSaveScore}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                    <div className="save-score-container">
+                      <input
+                        type="text"
+                        placeholder="ނަން ޖައްސަވާ..."
+                        className="name-input"
+                        value={playerName}
+                        onChange={(e) => setPlayerName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveScore();
+                          } else {
+                            handleNameInputKeyDown(e);
+                          }
+                        }}
+                        maxLength={15}
+                      />
+                    </div>
+
+                    {import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
+                      <div style={{ marginTop: '1rem' }}>
+                        <ReCAPTCHA
+                          sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY}
+                          onChange={(token: string | null) => setRecaptchaToken(token)}
+                          ref={recaptchaRef}
+                        />
+                      </div>
+                    )}
+
+                    <button className="save-btn" onClick={handleSaveScore} style={{ marginTop: '1rem' }}>
                       ސްކޯ ސޭވް ކުރަން
                     </button>
                   </div>

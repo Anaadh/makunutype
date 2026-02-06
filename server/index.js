@@ -4,6 +4,7 @@ import express from 'express';
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import axios from 'axios';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +42,30 @@ app.get('/api/leaderboard', async (req, res) => {
 
 // POST /api/leaderboard
 app.post('/api/leaderboard', async (req, res) => {
-    const { name, wpm, raw_wpm, accuracy, mode, config } = req.body;
+    const { name, wpm, raw_wpm, accuracy, mode, config, recaptchaToken } = req.body;
+
+    // Verify Recaptcha
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+
+    // Only verify if secret key is present (allows development without captcha if not configured)
+    if (secretKey) {
+        if (!recaptchaToken) {
+            return res.status(400).json({ error: 'Recaptcha token is missing' });
+        }
+
+        try {
+            const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${recaptchaToken}`;
+            const response = await axios.post(verificationUrl);
+
+            if (!response.data.success) {
+                return res.status(400).json({ error: 'Recaptcha verification failed' });
+            }
+        } catch (error) {
+            console.error('Recaptcha verification error:', error);
+            return res.status(500).json({ error: 'Recaptcha verification error' });
+        }
+    }
+
     try {
         const [result] = await pool.query(
             'INSERT INTO leaderboard (name, wpm, raw_wpm, accuracy, mode, config) VALUES (?, ?, ?, ?, ?, ?)',
