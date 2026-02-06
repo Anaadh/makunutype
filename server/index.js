@@ -58,6 +58,12 @@ app.get('/api/leaderboard', async (req, res) => {
 // POST /api/session-score
 app.post('/api/session-score', (req, res) => {
     const { wpm, raw_wpm, accuracy, mode, config } = req.body;
+
+    // Validate WPM
+    if (wpm > 500) {
+        return res.status(400).json({ error: 'invalid data' });
+    }
+
     req.session.lastScore = { wpm, raw_wpm, accuracy, mode, config };
     res.json({ success: true });
 });
@@ -72,6 +78,11 @@ app.post('/api/leaderboard', async (req, res) => {
     }
 
     const { wpm, raw_wpm, accuracy, mode, config } = lastScore;
+
+    // Reject if WPM exceeds limit
+    if (wpm > 500) {
+        return res.status(400).json({ error: 'invalid data' });
+    }
 
     // Verify Recaptcha
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;

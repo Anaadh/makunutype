@@ -6,6 +6,7 @@ import './App.css';
 
 const WORD_MODES = [5, 10, 20];
 const TIME_MODES = [15, 30, 60, 120];
+const MAX_WPM = 500;
 
 type TestMode = 'time' | 'words';
 type AppView = 'typing' | 'leaderboard';
@@ -165,6 +166,11 @@ const App: React.FC = () => {
       return;
     }
 
+    if (wpm > MAX_WPM) {
+      alert('invalid data');
+      return;
+    }
+
     const payload = {
       name: playerName.trim(),
       recaptchaToken
@@ -270,12 +276,14 @@ const App: React.FC = () => {
     setRawWpm(calculatedRawWpm);
     setAccuracy(calculatedAccuracy);
 
-    // Save to session immediately
-    saveSessionScore({
-      wpm: calculatedWpm,
-      rawWpm: calculatedRawWpm,
-      accuracy: calculatedAccuracy
-    });
+    // Save to session immediately if within limits
+    if (calculatedWpm <= MAX_WPM) {
+      saveSessionScore({
+        wpm: calculatedWpm,
+        rawWpm: calculatedRawWpm,
+        accuracy: calculatedAccuracy
+      });
+    }
   }, [words, startTime, endTime, currentWordIndex, testMode, testConfig, saveSessionScore]);
 
   useEffect(() => {
