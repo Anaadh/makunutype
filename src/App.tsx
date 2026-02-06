@@ -6,7 +6,7 @@ import './App.css';
 
 const WORD_MODES = [5, 10, 20];
 const TIME_MODES = [15, 30, 60, 120];
-const MAX_WPM = 500;
+const MAX_WPM = 350;
 
 type TestMode = 'time' | 'words';
 type AppView = 'typing' | 'leaderboard';
