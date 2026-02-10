@@ -89,3 +89,23 @@ npm run preview
 ## License
 
 MIT
+
+
+## Security: Signed session-score
+
+To prevent clients from easily manipulating the score submission, the app now signs the POST /api/session-score request with an HMAC signature bound to the current session.
+
+- On app load, the client requests GET /api/session-init with credentials. The server generates a random per-session token and stores it on the session; the same token is returned to the client.
+- When posting /api/session-score, the client computes an HMAC-SHA256 over a canonical string:
+  "wpm|raw_wpm|accuracy|mode|config|timestamp"
+  using the per-session token. The client sends two headers:
+  - x-makunu-signature: hex(HMAC-SHA256(token, canonical))
+  - x-makunu-timestamp: the timestamp (ms since epoch) used in the canonical string
+- The server verifies the signature using the session token and also checks the timestamp is within a time window.
+
+Environment variable:
+- SIGNATURE_WINDOW_MS: optional. The maximum allowed drift for x-makunu-timestamp in milliseconds. Default is 300000 (5 minutes).
+
+Notes:
+- This mechanism raises the bar against casual tampering by requiring a correct signature per session and rejecting stale replays.
+- Ensure your deployment serves the site over HTTPS so session cookies are protected in transit.

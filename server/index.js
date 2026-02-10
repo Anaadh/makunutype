@@ -6,6 +6,7 @@ import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import axios from 'axios';
+import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,9 +56,51 @@ app.get('/api/leaderboard', async (req, res) => {
     }
 });
 
-// POST /api/session-score
+// Initialize a per-session signing token
+app.get('/api/session-init', (req, res) => {
+    if (!req.session.sigKey) {
+        req.session.sigKey = crypto.randomBytes(32).toString('hex');
+    }
+    res.json({ token: req.session.sigKey });
+});
+
+// POST /api/session-score (signed)
 app.post('/api/session-score', (req, res) => {
-    const { wpm, raw_wpm, accuracy, mode, config } = req.body;
+    const { wpm, raw_wpm, accuracy, mode, config } = req.body || {};
+
+    // Require per-session signing key
+    const sigKey = req.session.sigKey;
+    if (!sigKey) {
+        return res.status(401).json({ error: 'session not initialized' });
+    }
+
+    const sigHeader = req.header('x-makunu-signature');
+    const tsHeader = req.header('x-makunu-timestamp');
+
+    if (!sigHeader || !tsHeader) {
+        return res.status(401).json({ error: 'missing signature' });
+    }
+
+    const timestamp = Number(tsHeader);
+    if (!Number.isFinite(timestamp)) {
+        return res.status(400).json({ error: 'invalid timestamp' });
+    }
+
+    const now = Date.now();
+    const windowMs = parseInt(process.env.SIGNATURE_WINDOW_MS || '300000', 10); // 5 minutes default
+    if (Math.abs(now - timestamp) > windowMs) {
+        return res.status(401).json({ error: 'signature expired' });
+    }
+
+    // Build canonical string for signing
+    const canonical = [wpm, raw_wpm, accuracy, mode, config, timestamp].map(v => String(v)).join('|');
+    const expected = crypto.createHmac('sha256', sigKey).update(canonical).digest('hex');
+
+    // Constant-time compare
+    const valid = expected.length === sigHeader.length && crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(sigHeader));
+    if (!valid) {
+        return res.status(401).json({ error: 'invalid signature' });
+    }
 
     // Validate WPM
     if (wpm > 500) {

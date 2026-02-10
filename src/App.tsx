@@ -4,6 +4,34 @@ import { phoneticMap, reversePhoneticMap } from './data/keymap';
 import ReCAPTCHA from 'react-google-recaptcha';
 import './App.css';
 
+// HMAC helper for signing session-score requests
+async function hmacSHA256Hex(keyHex: string, message: string): Promise<string> {
+  const hexToBytes = (hex: string): Uint8Array => {
+    const len = hex.length;
+    const bytes = new Uint8Array(len / 2);
+    for (let i = 0; i < len; i += 2) {
+      bytes[i / 2] = parseInt(hex.substring(i, i + 2), 16);
+    }
+    return bytes;
+  };
+  const bytesToHex = (buffer: ArrayBuffer): string => {
+    const bytes = new Uint8Array(buffer);
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const enc = new TextEncoder();
+  const keyData = hexToBytes(keyHex);
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyData,
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, enc.encode(message));
+  return bytesToHex(signature);
+}
+
 const WORD_MODES = [5, 10, 20];
 const TIME_MODES = [15, 30, 60, 120];
 const MAX_WPM = 350;
@@ -64,6 +92,24 @@ const App: React.FC = () => {
   const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
   const [showHelper, setShowHelper] = useState<boolean>(localStorage.getItem('makunu_show_helper') === 'true' || true);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [sigToken, setSigToken] = useState<string | null>(null);
+
+  const ensureSigToken = useCallback(async (): Promise<string | null> => {
+    if (sigToken) return sigToken;
+    try {
+      const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/leaderboard$/, '');
+      const resp = await fetch(`${base}/session-init`, { credentials: 'include' });
+      if (!resp.ok) return null;
+      const data = await resp.json();
+      if (data && data.token) {
+        setSigToken(data.token);
+        return data.token as string;
+      }
+    } catch (e) {
+      console.error('Failed to initialize session token', e);
+    }
+    return null;
+  }, [sigToken]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const wordsWrapperRef = useRef<HTMLDivElement>(null);
@@ -134,27 +180,53 @@ const App: React.FC = () => {
     }
   }, [currentView, testMode, testConfig, fetchLeaderboard]);
 
+  // Pre-initialize session signing token
+  useEffect(() => {
+    ensureSigToken();
+  }, [ensureSigToken]);
+
   const saveSessionScore = useCallback(async (stats: { wpm: number, rawWpm: number, accuracy: number }) => {
     try {
-      const apiUrl = (import.meta.env.VITE_API_URL || '/api').replace(/\/leaderboard$/, '') + '/session-score';
+      const base = (import.meta.env.VITE_API_URL || '/api').replace(/\/leaderboard$/, '');
+      const apiUrl = base + '/session-score';
+
+      const payload = {
+        wpm: stats.wpm,
+        raw_wpm: stats.rawWpm,
+        accuracy: stats.accuracy,
+        mode: testMode,
+        config: testConfig
+      };
+
+      const ts = Date.now();
+      const token = await ensureSigToken();
+
+      if (!token) {
+        console.warn('Unable to initialize signing token; skipping session-score submission.');
+        return;
+      }
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      };
+
+      const canonical = [payload.wpm, payload.raw_wpm, payload.accuracy, payload.mode, payload.config, ts]
+        .map(v => String(v))
+        .join('|');
+      const sig = await hmacSHA256Hex(token, canonical);
+      headers['x-makunu-signature'] = sig;
+      headers['x-makunu-timestamp'] = String(ts);
+
       await fetch(apiUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         credentials: 'include',
-        body: JSON.stringify({
-          wpm: stats.wpm,
-          raw_wpm: stats.rawWpm,
-          accuracy: stats.accuracy,
-          mode: testMode,
-          config: testConfig
-        }),
+        body: JSON.stringify(payload),
       });
     } catch (err) {
       console.error('Error saving session score:', err);
     }
-  }, [testMode, testConfig]);
+  }, [testMode, testConfig, ensureSigToken]);
 
   const handleSaveScore = async () => {
     if (!playerName.trim() || hasSaved) return;
